@@ -1,4 +1,10 @@
-# This is the from scratch implementation of LOF algorithm.
+"""
+Local Outlier Factor(LOF) algorithm
+-----------------------------------
+This module includes the from scratch implementation of the LOF algorithm for anomaly detection. 
+Any LOF score below 1.2 is considered as an anomaly. 
+
+"""
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -7,6 +13,30 @@ from scipy.spatial import distance
 
 
 class LOF_alg():
+    """Local Outlier Factor anomaly detection algorithm with semi-supervised learning format.
+
+    LOF uses k-Nearest Neighbours concept to find the nearest neighbouring points for calculation of LOF scores.
+    
+    Parameters
+    ----------
+    k : number of neighbours to consider
+
+    Attributes
+    ----------
+    n_features : number of features
+    n_samples : number of points
+    n_samples_pr : number of samples during prediction
+    n_features_pr : number of features duting prediction
+    lrd : list of Local Reachability Distances
+    train_data : list of training data-points
+    ind_nbr : index of neighbouring points
+    dist_nbr : distance of neighbouring points
+
+    References
+    ----------
+    -- [1] Aggarwal, Charu C., and Charu C. Aggarwal. "Applications of Outlier Analysis." Outlier Analysis (2013): 373-400.
+
+    """
     def __init__(self, k):
         self.k = k
         self.n_features = 0
@@ -19,15 +49,46 @@ class LOF_alg():
         self.dist_nbr = None
 
     def sparse_argsort(self, arr):
+        """Sorting function to sort nearest points to farthest
+        Parameters
+        ----------
+        arr : {n-dimensional array} of shape (n_samples, n_features) to be ascendingly sorted
+
+        Returns
+        -------
+        indices : ascendingly sorted indeces of arr
+        """
         indices = np.nonzero(arr)[0]
         return indices[np.argsort(arr[indices])]
 
     def fit(self, X):
+        """Fit the LOF algorithm with training data or storing the data space on which the new point to be predicted 
+        is evaluated against.
+        
+        Parameters
+        ----------
+        X : {n-dimensional array} of shape (n_samples, n_features) 
+
+        Returns
+        -------
+        self : LOF_alg
+            The fitted LOF model
+        """
         X = np.array(X)
         self.train_data = X
         self.n_samples, self.n_features = X.shape[0], X.shape[1]  # number of rows and columns
 
     def predict(self, Y):
+        """Predict the labels (1 normal , -1 anomalous) of X according to LOF algorithm
+        Parameters
+        ----------
+        Y : {n-dimensional array} of shape (n_samples, n_features) for prediction
+
+        Returns
+        ---------
+        resultArray : ndarray of shape (n_samples)
+            Returns -1 for anomalies and +1 for normal cases.
+        """
         Y = np.array(Y)
         resultArray = np.zeros(shape=Y.shape[0])
         self.n_samples_pr, self.n_features_pr = Y.shape[0], Y.shape[1]  # number of rows and columns
@@ -51,6 +112,19 @@ class LOF_alg():
         return resultArray
 
     def knn(self, train_data, x):
+        """Function to find the k-Nearest Neighbours
+        Parameters
+        ----------
+        train_data : {n-dimensional array} of shape (n_samples, n_features) of training data
+        x : {n-dimensional array} of shape (n_samples, n_features) of reference data-point whose neighbours are to be found
+
+        Returns
+        -------
+        dist_nbr : distance each neighbours in ascending order from x
+        ind_nbr : index of neighbours in ascending order from x
+
+        Returns the distances and index of the k-Nearest Neighbours 
+        """
         dist_nbr = np.zeros(shape=self.n_samples+1, dtype=float)
         for j in range(self.n_samples+1):
             dist_nbr[j] = np.sqrt(np.sum(np.square(train_data[j] - x)))  # Eucledian Distance
@@ -58,6 +132,16 @@ class LOF_alg():
         return dist_nbr, ind_nbr
 
     def local_reachability_density(self, train_data):
+        """Finds the Local Reachability Density for LOF value calculation 
+        
+        Parameters
+        ----------
+        train_data : {n-dimensional array} of shape (n_samples, n_features) of training datas
+
+        Returns
+        -------
+        Returns the local reachability density
+        """
         avg_RD = 0
         t = 0
         for j in range(self.k-1):
@@ -66,53 +150,3 @@ class LOF_alg():
             t = dist_nbr[ind_nbr[self.k-1]]
             avg_RD = avg_RD + max(r, t)
         return self.k/avg_RD
-
-
-
-
-
-
-
-
-
-    # def local_reachability_density(self, i):
-    #     # for i in range(self.n_samples):
-    #     avg_RD = 0
-    #     for j in range(self.k):
-    #             avg_RD = avg_RD + max(self.dist_nbr[i][self.ind_nbr[i][j]], self.dist_nbr[self.ind_nbr[i][j]][self.ind_nbr[self.ind_nbr[i][j]][self.k-1]])
-    #
-    #     return self.k/avg_RD
-
-
-    # def fit(self, X):
-    #     old = 0
-    #     X = np.array(X)
-    #
-    #     self.dist_nbr, self.ind_nbr = self.knn_fit(X)
-    #     for i in range(self.n_samples):
-    #         self.lrd = np.append(self.lrd, self.local_reachability_density(i))
-    #
-    #     for i in range(self.n_samples):
-    #         sum_lrd = 0
-    #         for j in self.ind_nbr[i]:
-    #             sum_lrd = sum_lrd + self.lrd[j]
-    #         self.lof = sum_lrd / (self.k * self.lrd[i])
-    #         if self.lof > old:
-    #             self.cutoff = self.lof
-    #             old = self.lof
-    #     print(self.cutoff)
-    #     return self
-
-    # def knn(self, X):
-    #     # KNN part
-    #     # dist_nbr = [[None] * self.n_samples] * self.n_samples
-    #     dist_nbr = np.full(shape=(self.n_samples, self.n_samples), fill_value=100, dtype=float)
-    #     for i in range(self.n_samples-1):
-    #         for j in range(i+1, self.n_samples):
-    #             dist_nbr[j][i] = dist_nbr[i][j] = np.sqrt(np.sum(np.square(X[i] - X[j])))  # Eucledian Distance
-    #     # dist_nbr = np.sort(dist)[:, :self.k]
-    #     ind_nbr = np.argsort(dist_nbr)[:, :self.k]
-    #     return dist_nbr, ind_nbr
-
-
-
